@@ -1,12 +1,12 @@
-This directory contain a small project to build and run a C++ tool that can compute and preint statistics for each
-column including count of items mean, standatrd deviation, min and max. The code was built using C++ 20 standard.
+This directory contain a small project to build and run a C++ tool that can compute and print statistics for each of its
+column including count of items, mean, standard deviation, min and max. The code was built using C++ 20 standard.
 
 The program was built and tested using VS Code IDE on M1 Macbook Air. The following command was used to compile:
 /usr/bin/g++ -fdiagnostics-color=always -std=c++20 -g /Users/amitsharma/Documents/code/csv/csv_processor.cpp -o /Users/amitsharma/Documents/code/csv/csv_processor
 
-If you need to compile on your machine make sure to change the path for g++ compiler, if needed.
+If you need to compile on your machine, please make sure to change the path for g++ compiler, if needed.
 
-To run the program please look at the usage below:
+To run the program, please look at the usage below:
 Usage: csv_processor csv_file_name [number_of_threads]
 Where,
 csv_file_name: (Requried) Name of the input csv whose stats will be printed (required)
