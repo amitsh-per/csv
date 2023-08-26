@@ -1,4 +1,4 @@
-This directory contain a small project to build and run a C++ tool that can compute and print statistics for each of its
+This directory contain a small project to build and run a multi threaded C++ tool that can compute and print statistics for each of its
 column including count of items, mean, standard deviation, min and max. The code was built using C++ 20 standard.
 
 The program was built and tested using VS Code IDE on M1 Macbook Air. The following command was used to compile:
@@ -7,14 +7,20 @@ The program was built and tested using VS Code IDE on M1 Macbook Air. The follow
 If you need to compile on your machine, please make sure to change the path for g++ compiler, if needed.
 
 To run the program, please look at the usage below:
-Usage: csv_processor csv_file_name [number_of_threads]
+Usage: csv_processor csv_file_name [number_of_worker_threads]
 Where,
 csv_file_name: (Requried) Name of the input csv whose stats will be printed (required)
-number_threads : (Optional) Number of threads the user wants to spawn in multithreaded mode. Each column stats are computed in a separate thread. 
-                If this argument is not given then the tool runs in a single thread(no multithreading is used). 
+number_of_worker_threads : (Optional) Number of worker threads that the user wants to spawn in multithreaded mode in addtion to the application's
+                            main thread. Statistics for a batch of columns are computed in separate threads. If this argument is not given then the tool runs in a single thread(no multithreading is used). 
 
 Here is a sample output:
+==========================
 
+Calculating stats from the provided csv ...
+Launching thread# 1
+Launching thread# 2
+Launching thread# 3
+Launching thread# 4
 [Count, Mean, Std, Min, Max]
 [5, 3, 3.1622776601683795228, 1, 5]
 [5, 4, 7.3484692283495345322, 1, 10]

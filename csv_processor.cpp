@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <cmath>
+#include <thread>
 
 using namespace std;
 
@@ -27,7 +28,7 @@ class Column {
         }
         void addData(double val) {
             
-            //Update min, max and sum so we dont have to loop through the data to calculate it. 
+            //Update min, max and sum so we dont have to loop through the data later to calculate it. 
             //We stil have to loop once to calculate the std but not twice
             if (m_data.size() == 0 ) {
                 m_max = val;
@@ -64,9 +65,11 @@ class Column {
 };
 
 class Csv {
+    //class that parses the csv file, extracts and stores data and prints the stats
     private:
         vector<Column*> m_columns;
         filesystem::path m_filename {};
+        vector<thread*> threads;
 
     public:
         Csv(filesystem::path f) {
@@ -94,26 +97,27 @@ class Csv {
                 vector<string> tokens;
                 int col_num {0};
                 Column* col;
-                //Tokenize each line with , a separator
-                while(getline(is, token, ',')) { //use comma as delim for cutting string
+                //Parse the csv to populate the Column objects
+                //Tokenize each line with a ','  separator
+                while(getline(is, token, ',')) { 
                     if (line_num == 1) {
                         //Create Column objs from the column names in the first line
                         col = new Column(token);
                         m_columns.push_back(col);
                     } else {
-                        std::size_t pos;
+                        size_t pos;
                         double val = 0.0;
                         try {
                             val = stod(token, &pos);
                         } catch (exception e) {
-                            cerr << "Exception occured when converting text: '" << token << "' to a number at cell with column# " << col_num +1  << " and line# " << line_num << endl;
-                            //0.0 will be added for that cell
+                            cerr << "Exception occured when converting text: '" << token << "' to a number in cell with column# " << col_num +1  << " and line# " << line_num << endl;
+                            //Default of 0.0 will be added for this cell
                             m_columns[col_num]->addData(val);
                             continue;
                         }
                         if (pos != token.length()) {
-                            cerr << "Text: '" << token << "' could not be converted to number at cell with column# " << col_num+1 << " and line# " << line_num << endl;
-                            //0.0
+                            cerr << "Text: '" << token << "' could not be converted to number in cell with column# " << col_num+1 << " and line# " << line_num << endl;
+                            //Default of 0.0 will be added for this cell
                         }
                          m_columns[col_num]->addData(val);
                     }
@@ -121,15 +125,47 @@ class Csv {
                 }
             }
         }
+
+        void launchThreadBatch(int col_n, int cols) {
+            //Call computeStats for cols number of columns starting at column# col_n. Called directly each worked thread
+            for(int n = 0; n < cols; n++) {
+                m_columns[col_n++]->computeStats();
+            }                                    
+        }  
+
         void printAllColumnsStats(int thread_cnt ) {
+            //Main function to compute all threads with multi threading and then print them
+            int cols_per_batch = m_columns.size() / thread_cnt;
+            int rem = m_columns.size() % thread_cnt;
+            int num_batches = (m_columns.size() - rem) / cols_per_batch;
             int col_cnt = 0; 
+            
+            //Compute stats for each column using the number of worker thread that the user requested or in a single threaded mode 
             while (col_cnt < m_columns.size()) {
-                if (thread_cnt == 0 ) {
+                if (thread_cnt == 1 ) {
+                    //Processing in main application thread
                     m_columns[col_cnt]->computeStats();
                     col_cnt++;   
-                }
+                } else {
+                    int b_n = 0;
+                    while (b_n < num_batches-1) {
+                        cout << "Launching thread# " << b_n+1 << endl;
+                        thread* t = new thread { &Csv::launchThreadBatch, this, col_cnt, cols_per_batch};
+                        threads.push_back(t);
+                        col_cnt += cols_per_batch;                 
+                        b_n++;
+                    }
+                    //Reset thread_cnt to 1 so the remaining columns are processed in the main app thread after 
+                    //the requested number of workers have been launched
+                    thread_cnt = 1;
+                }                
+            }
+            //Join all threads before calling the print functions
+            for (int i = 0; i<threads.size(); i++) {
+                threads[i]->join();
             }
             cout << "[Count, Mean, Std, Min, Max]" << endl;
+            //Call print for each column
             for(int col = 0; col<m_columns.size(); col++) {
                 m_columns[col]->printStats();
             }
@@ -139,10 +175,10 @@ class Csv {
 int main(int argc, char* argv[]) {
     std::cout << "Calculating stats from the provided csv ..." << endl;
     
-    int thread_cnt = 0;
+    int thread_cnt = 1;
     if (argc < 2 ) {
         cerr << "csv filename is a required argument" << endl;
-        cout << "Usage: csv_processor csv_file_name [number_of_threads]" << endl;
+        cout << "Usage: csv_processor csv_file_name [number_of_worker_threads]" << endl;
         exit(1);
     } else {
         size_t pos;
@@ -150,10 +186,19 @@ int main(int argc, char* argv[]) {
         filesystem::path p{cf};
         Csv csv = Csv(p);
         if (argc > 2) {
+            //User has requested multi threading
             string thstr = argv[2];
-            int th = stoi(thstr, &pos);
+            int th = 0;
+            try
+            {
+                 th = stoi(thstr, &pos);
+            }
+            catch(const std::exception& e)
+            {
+                cerr <<"Non numeric value for the number of threads. " << e.what() << '\n';
+            }
             if (pos == thstr.length()) {
-                thread_cnt = th;
+                thread_cnt += th;
             }
         }
         csv.printAllColumnsStats(thread_cnt);
