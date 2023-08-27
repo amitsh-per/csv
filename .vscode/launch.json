@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/csv_processor",
-            "args": ["small.csv"],
+            "args": ["small.csv", "2"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
